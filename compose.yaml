@@ -1,0 +1,48 @@
+services:
+  db:
+    image: mysql:latest
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: # your password
+      MYSQL_DATABASE: eventbook
+    networks:
+      - mynetwork1
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 1m
+      timeout: 1m
+      retries: 5
+      start_period: 1m
+
+  web:
+    build: .
+    container_name: web
+    ports:
+      - 8000:8000
+    networks:
+      - mynetwork1
+    command: ["/app/entrypoint.sh", "python", "manage.py", "runserver", "0.0.0.0:8000"]
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 5
+      start_period: 2m
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - '6379:6379'
+    networks:
+      - mynetwork1
+
+
+
+networks:
+  mynetwork1:
+    driver: bridge
